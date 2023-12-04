@@ -1,0 +1,160 @@
+import pandas as pd
+import sys
+from io import StringIO
+
+# file path
+file_path = r"S:\vb_crime\Police_Incident_Reports.csv"
+df = pd.read_csv(file_path)
+
+# unfounded cases
+df = df[df["Case_Status"] != "Unfounded"]
+
+# datetime
+df["Date_Found"] = pd.to_datetime(
+    df["Date_Found"], format="%Y/%m/%d %H:%M:%S%z", errors="coerce"
+)
+
+# FBI part one
+specific_offenses = [
+    "homicide",
+    "rape",
+    "robbery",
+    "assault, aggravated",
+    "burglary",
+    "larceny",
+    "motor vehicle theft",
+    "arson",
+    "human trafficking, commercial sex acts",
+]
+
+
+def count_specific_offenses_by_date_range(df, start_date, end_date, specific_offenses):
+    filtered_df = df[(df["Date_Found"] >= start_date) & (df["Date_Found"] <= end_date)]
+
+    # how do officers enter offenses? drop down menu? why are they all over the place?
+    pattern = "|".join(specific_offenses)
+
+    filtered_df = filtered_df[
+        filtered_df["Offense_Description"].str.lower().str.contains(pattern)
+    ]
+
+    result = (
+        filtered_df.groupby("Offense_Description").size().sort_values(ascending=False)
+    )
+
+    return result
+
+
+# dates
+start_date_2023 = "2023-01-01"
+end_date_2023 = "2023-06-30"
+
+# offense count
+offenses_2023 = count_specific_offenses_by_date_range(
+    df, start_date_2023, end_date_2023, specific_offenses
+)
+
+# # 1 offense for 2023
+top_offense_2023 = offenses_2023.idxmax()
+
+# #1 offense in 2023 print
+print(
+    f"The Zone with the most incidents for the #1 offense in the first half of 2023 is: {top_offense_2023}"
+)
+
+# top 10 offenses for 2023 print
+print("\nTop 10 Offenses in 2023:")
+print(offenses_2023.head(10))
+
+
+start_date_2022 = "2022-01-01"
+end_date_2022 = "2022-06-30"
+
+start_date_2021 = "2021-01-01"
+end_date_2021 = "2021-06-30"
+
+
+# offenses for 2021
+offenses_2021 = count_specific_offenses_by_date_range(
+    df, start_date_2021, end_date_2021, specific_offenses
+)
+# 2022
+offenses_2022 = count_specific_offenses_by_date_range(
+    df, start_date_2022, end_date_2022, specific_offenses
+)
+
+print("\nTop 10 Offenses in 2021:")
+print(offenses_2021.head(10))
+
+print("\nTop 10 Offenses in 2022:")
+print(offenses_2022.head(10))
+
+# comparison
+if top_offense_2023 in offenses_2022.index and top_offense_2023 in offenses_2021.index:
+    incidents_2023 = offenses_2023[top_offense_2023]
+    incidents_2022 = offenses_2022[top_offense_2023]
+    incidents_2021 = offenses_2021[top_offense_2023]
+
+    trend_message = (
+        f"\nTrend comparison for {top_offense_2023} in the first half of each year:\n"
+    )
+    trend_message += f"2023: {incidents_2023} incidents\n"
+    trend_message += f"2022: {incidents_2022} incidents\n"
+    trend_message += f"2021: {incidents_2021} incidents"
+
+    print(trend_message)
+else:
+    print(
+        f"Data not available for {top_offense_2023} in one or more of the previous years."
+    )
+"""
+
+work in progress code below.
+
+will attempt to use openpyxl in the future
+
+output_buffer = StringIO()
+sys.stdout = output_buffer
+
+# List to store each line of the captured output
+output_lines = []
+
+# Print statements for the results
+output_lines.append(
+    f"The Zone with the most incidents for the #1 offense in the first half of 2023 is: {top_offense_2023}"
+)
+
+# Print the top 10 offenses for 2023
+output_lines.append("\nTop 10 Offenses in 2023:")
+output_lines.append(offenses_2023.head(10).to_string())
+
+# Compare trends with previous years
+if top_offense_2023 in offenses_2022.index and top_offense_2023 in offenses_2021.index:
+    incidents_2023 = offenses_2023[top_offense_2023]
+    incidents_2022 = offenses_2022[top_offense_2023]
+    incidents_2021 = offenses_2021[top_offense_2023]
+
+    trend_message = (
+        f"\nTrend comparison for {top_offense_2023} in the first half of each year:\n"
+    )
+    trend_message += f"2023: {incidents_2023} incidents\n"
+    trend_message += f"2022: {incidents_2022} incidents\n"
+    trend_message += f"2021: {incidents_2021} incidents"
+
+    output_lines.append(trend_message)
+else:
+    output_lines.append(
+        f"Data not available for {top_offense_2023} in one or more of the previous years."
+    )
+
+# Reset stdout to its original value
+sys.stdout = sys.__stdout__
+
+# Create a DataFrame from the list
+results_df = pd.DataFrame({"Statistics": output_lines})
+
+# Export the DataFrame to a CSV file
+results_df.to_csv("python_results.csv", index=False)
+all results dont make it to new df. will try openpyxl in the future.
+
+"""
