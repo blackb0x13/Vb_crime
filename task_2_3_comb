@@ -1,0 +1,129 @@
+import pandas as pd
+import sys
+from io import StringIO
+
+# file path
+file_path = r"S:\vb_crime\Police_Incident_Reports.csv"
+df = pd.read_csv(file_path)
+
+
+df = df[df["Case_Status"] != "Unfounded"]
+
+# "Date Found" to datetime
+df["Date_Found"] = pd.to_datetime(
+    df["Date_Found"], format="%Y/%m/%d %H:%M:%S%z", errors="coerce"
+)
+
+# specific offenses
+specific_offenses = [
+    "homicide",
+    "rape",
+    "robbery",
+    "assault, aggravated",
+    "burglary",
+    "larceny",
+    "motor vehicle theft",
+    "arson",
+    "human trafficking, commercial sex acts",
+]
+
+
+# count specific offenses by date range and Zone_ID
+def count_specific_offenses_by_date_range(df, start_date, end_date, specific_offenses):
+    filtered_df = df[(df["Date_Found"] >= start_date) & (df["Date_Found"] <= end_date)]
+
+    # Create a regular expression pattern using the specific offenses list
+    pattern = "|".join(specific_offenses)
+
+    filtered_df = filtered_df[
+        filtered_df["Offense_Description"].str.lower().str.contains(pattern)
+    ]
+
+    result = filtered_df.groupby("Zone_ID").size().sort_values(ascending=False)
+
+    return result
+
+
+# date found ranges
+start_date_2023 = "2023-01-01"
+end_date_2023 = "2023-06-30"
+
+# specific offenses for 2023
+offenses_2023 = count_specific_offenses_by_date_range(
+    df, start_date_2023, end_date_2023, specific_offenses
+)
+
+# #1 offense and Zone for 2023
+top_offense_2023 = offenses_2023.idxmax()
+top_zone_2023 = top_offense_2023
+
+# statistics for the incidents of the #1 offense in 2023
+max_value_2023 = offenses_2023.max()
+min_value_2023 = offenses_2023.min()
+mean_value_2023 = offenses_2023.mean()
+std_dev_2023 = offenses_2023.std()
+
+# Print statistics for the incidents of the #1 offense in 2023
+print(f"\nStatistics for incidents of {top_offense_2023} in the first half of 2023:")
+print(f"Maximum Value: {max_value_2023}")
+print(f"Minimum Value: {min_value_2023}")
+print(f"Mean: {mean_value_2023}")
+print(f"One Standard Deviation: {std_dev_2023}")
+
+
+# top 10 address blocks for the #1 Zone in 2023
+def top_address_blocks_for_zone(df, start_date, end_date, zone_id):
+    filtered_df = df[(df["Date_Found"] >= start_date) & (df["Date_Found"] <= end_date)]
+    filtered_df = filtered_df[filtered_df["Zone_ID"] == zone_id]
+
+    result = (
+        filtered_df.groupby(["Block", "Street"]).size().sort_values(ascending=False)
+    )
+
+    return result
+
+
+address_blocks_2023 = top_address_blocks_for_zone(
+    df, start_date_2023, end_date_2023, top_zone_2023
+)
+
+# top 10 address blocks for the #1 Zone in 2023
+print("\nTop 10 Address Blocks in 2023 for the #1 Zone:")
+print(address_blocks_2023.head(10))
+
+"""
+
+in work code below.
+
+
+output_buffer = StringIO()
+sys.stdout = output_buffer
+
+# Print statements for the results
+print(f"\nStatistics for incidents of {top_offense_2023} in the first half of 2023:")
+print(f"Maximum Value: {max_value_2023}")
+print(f"Minimum Value: {min_value_2023}")
+print(f"Mean: {mean_value_2023}")
+print(f"One Standard Deviation: {std_dev_2023}")
+
+# Reset stdout to its original value
+sys.stdout = sys.__stdout__
+
+# Get the captured output as a string
+captured_output = output_buffer.getvalue()
+
+# Create a list to store each line of the captured output
+output_lines = [
+    "Statistics for incidents of {top_offense_2023} in the first half of 2023:",
+    f"Maximum Value: {max_value_2023}",
+    f"Minimum Value: {min_value_2023}",
+    f"Mean: {mean_value_2023}",
+    f"One Standard Deviation: {std_dev_2023}",
+]
+
+# Create a DataFrame from the list
+results_df = pd.DataFrame({"Statistics": output_lines})
+
+# Export the DataFrame to a CSV file
+results_df.to_csv("python_results.csv", index=False)
+"""
